@@ -27,6 +27,7 @@
 #include "PlayerbotAIConfig.h"
 #include "PlayerbotOperations.h"
 #include "PlayerbotWorldThreadProcessor.h"
+#include "PlayerbotsDatabase.h"
 #include "Player.h"
 #include "RandomPlayerbotMgr.h"
 
