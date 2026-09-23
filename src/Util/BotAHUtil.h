@@ -194,6 +194,15 @@ namespace BotAuctionUtils
         return uint32(price / 10000.0) * 10000;
     }
 
+    inline bool IsTradeGood(ItemTemplate const* proto) { return proto && proto->Class == ITEM_CLASS_TRADE_GOODS; }
+
+    // Copper a vendor pays for the whole stack; a cheap, always-available value proxy.
+    inline uint64 VendorValue(Item const* item)
+    {
+        ItemTemplate const* proto = item ? item->GetTemplate() : nullptr;
+        return proto ? uint64(proto->SellPrice) * item->GetCount() : 0;
+    }
+
     inline bool IsAuctionableReagent(ItemTemplate const* proto)
     {
         if (!proto)
@@ -353,6 +362,30 @@ public:
     {
         LoadPolicies();
         LoadPriceCache();
+    }
+
+    // True when an item of this template may be posted: auctionable, not bind-on-pickup or
+    // quest-bound, not excluded by config, and sellable under its policy. Does not look at the
+    // bot's own use for the item (see ItemUsageValue).
+    [[nodiscard]] bool IsSellCandidate(ItemTemplate const* proto) const
+    {
+        if (!proto || !BotAuctionUtils::IsAuctionableGear(proto))
+            return false;
+
+        if (proto->Bonding == BIND_WHEN_PICKED_UP || proto->Bonding == BIND_QUEST_ITEM)
+            return false;
+
+        if (sPlayerbotAIConfig.IsInAuctionHouseExcludedItemList(proto->ItemId))
+            return false;
+
+        return GetPolicy(proto->ItemId).sellable;
+    }
+
+    // Template rule plus the instance checks: tradeable (not soulbound, not an equipped or
+    // non-empty bag).
+    [[nodiscard]] bool IsSellCandidate(Item const* item) const
+    {
+        return item && item->CanBeTraded() && IsSellCandidate(item->GetTemplate());
     }
 
     [[nodiscard]] PlayerbotAuctionItemPolicy GetPolicy(uint32 itemId) const

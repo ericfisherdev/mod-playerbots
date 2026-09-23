@@ -86,32 +86,12 @@ uint32 AhSellListValue::ComputeBagFingerprint()
 
 bool AhSellListValue::IsItemSellableOnAh(Item* item) const
 {
-    if (!item)
-        return false;
-
-    ItemTemplate const* proto = item->GetTemplate();
-    if (!proto || !item->CanBeTraded())
-        return false;
-
-    // Cheap pre-filter — skip items that are clearly not AH material
-    if (!BotAuctionUtils::IsAuctionableGear(proto))
-        return false;
-
-    if (proto->Bonding == BIND_WHEN_PICKED_UP || proto->Bonding == BIND_QUEST_ITEM)
-        return false;
-
-    uint32 entry = item->GetEntry();
-    if (sPlayerbotAIConfig.IsInAuctionHouseExcludedItemList(entry))
-        return false;
-
-    if (!sBotAHUtil.GetPolicy(entry).sellable)
+    // Cheap template and instance checks first
+    if (!sBotAHUtil.IsSellCandidate(item))
         return false;
 
     // Expensive check last
-    if (AI_VALUE2(ItemUsage, "item usage", entry) != ITEM_USAGE_AH)
-        return false;
-
-    return true;
+    return AI_VALUE2(ItemUsage, "item usage", item->GetEntry()) == ITEM_USAGE_AH;
 }
 
 AhListMap& AhSellListValue::Get()
