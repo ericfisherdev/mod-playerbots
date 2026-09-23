@@ -11,6 +11,7 @@
 #include "AiObjectContext.h"
 #include "ArenaTeam.h"
 #include "ArenaTeamMgr.h"
+#include "BotAHUtil.h"
 #include "DBCStores.h"
 #include "DBCStructure.h"
 #include "GuildMgr.h"
@@ -1057,7 +1058,7 @@ void PlayerbotFactory::Refresh()
     //     InitEquipment(true);
     // }
     InitAttunementQuests();
-    ClearInventory();
+    ClearInventory(SelectAuctionLootToKeep());
     InitAmmo();
     InitFood();
     InitReagents();
@@ -1894,10 +1895,16 @@ void PlayerbotFactory::InitTalentsByParsedSpecLink(Player* bot, std::vector<std:
 class DestroyItemsVisitor : public IterateItemsVisitor
 {
 public:
-    DestroyItemsVisitor(Player* bot) : IterateItemsVisitor(), bot(bot) {}
+    DestroyItemsVisitor(Player* bot, GuidSet keptItems = {})
+        : IterateItemsVisitor(), bot(bot), keptItems(std::move(keptItems))
+    {
+    }
 
     bool Visit(Item* item) override
     {
+        if (keptItems.count(item->GetGUID()))
+            return true;
+
         uint32 id = item->GetTemplate()->ItemId;
         if (CanKeep(id))
         {
@@ -1922,7 +1929,23 @@ private:
     }
 
     Player* bot;
+    GuidSet keptItems;
     std::set<uint32> keep;
+};
+
+// Collects bag items the bot could post to the auction house.
+class AuctionLootVisitor : public IterateItemsVisitor
+{
+public:
+    bool Visit(Item* item) override
+    {
+        if (sBotAHUtil.IsSellCandidate(item))
+            candidates.push_back(item);
+
+        return true;
+    }
+
+    std::vector<Item*> candidates;
 };
 
 bool PlayerbotFactory::CanEquipArmor(ItemTemplate const* proto)
@@ -3853,10 +3876,43 @@ void PlayerbotFactory::InitInstanceQuests()
     bot->SetUInt32Value(PLAYER_XP, currentXP);
 }
 
-void PlayerbotFactory::ClearInventory()
+void PlayerbotFactory::ClearInventory() { ClearInventory(GuidSet()); }
+
+void PlayerbotFactory::ClearInventory(GuidSet const& keptItems)
 {
-    DestroyItemsVisitor visitor(bot);
+    DestroyItemsVisitor visitor(bot, keptItems);
     IterateItems(&visitor);
+}
+
+// Picks up to AuctionHouseRefreshKeepItems bag items to survive ClearInventory: trade goods
+// first, then the highest vendor value. Empty when auction house botting or the option is off.
+GuidSet PlayerbotFactory::SelectAuctionLootToKeep()
+{
+    GuidSet keptItems;
+    uint32 const limit = sPlayerbotAIConfig.auctionHouseRefreshKeepItems;
+    if (!sPlayerbotAIConfig.enableAuctionHouseBotting || !limit)
+        return keptItems;
+
+    AuctionLootVisitor visitor;
+    IterateItems(&visitor);
+    std::vector<Item*>& candidates = visitor.candidates;
+
+    auto const keepCount = static_cast<std::ptrdiff_t>(std::min<std::size_t>(limit, candidates.size()));
+    std::partial_sort(candidates.begin(), candidates.begin() + keepCount, candidates.end(),
+                      [](Item const* a, Item const* b)
+                      {
+                          bool const aTradeGood = BotAuctionUtils::IsTradeGood(a->GetTemplate());
+                          bool const bTradeGood = BotAuctionUtils::IsTradeGood(b->GetTemplate());
+                          if (aTradeGood != bTradeGood)
+                              return aTradeGood;
+
+                          return BotAuctionUtils::VendorValue(a) > BotAuctionUtils::VendorValue(b);
+                      });
+
+    for (auto it = candidates.begin(); it != candidates.begin() + keepCount; ++it)
+        keptItems.insert((*it)->GetGUID());
+
+    return keptItems;
 }
 
 void PlayerbotFactory::ClearAllItems()

@@ -1646,6 +1646,14 @@ AiPlayerbot.AuctionHouseBuyoutMaxPct = 133
 # Default: 20
 AiPlayerbot.AuctionHouseMaterialStackSize = 20
 
+# Bag items a random bot keeps through a refresh (random teleport, revive, grind reassignment),
+# which otherwise destroys everything in its bags. Only items the bot could post to the auction
+# house count; trade goods are kept first, then the most valuable stacks by vendor price. Without
+# this, loot rarely survives long enough to reach an auctioneer. Requires EnableAuctionHouseBotting.
+# 0 = keep nothing (previous behaviour).
+# Default: 0
+AiPlayerbot.AuctionHouseRefreshKeepItems = 0
+
 # Freshness window for the AH price cache, in seconds. Within this window,
 # pricing reuses the most recent observation; afterwards a re-query is
 # triggered before posting. Lower = more accurate, more AH traffic.
