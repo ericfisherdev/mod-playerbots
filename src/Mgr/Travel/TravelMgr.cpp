@@ -3712,6 +3712,34 @@ std::vector<WorldLocation> TravelMgr::GetCityLocations(Player* bot)
     return fallbackLocations;
 }
 
+bool TravelMgr::SelectAuctioneerByMap(Player* bot, NpcLocation& outAuctioneer)
+{
+    uint16 botMapId = bot->GetMapId();
+    auto const& cache = (bot->GetTeamId() == TEAM_HORDE) ? hordeAuctioneerCache : allianceAuctioneerCache;
+
+    auto mapIt = cache.find(botMapId);
+    if (mapIt == cache.end() || mapIt->second.empty())
+        return false;
+
+    // Collect all areas on this map that have auctioneers
+    std::vector<uint32> areaIds;
+    areaIds.reserve(mapIt->second.size());
+    for (auto const& [areaId, npcs] : mapIt->second)
+    {
+        if (!npcs.empty())
+            areaIds.push_back(areaId);
+    }
+
+    if (areaIds.empty())
+        return false;
+
+    // Pick a random area, then a random auctioneer in that area
+    uint32 selectedArea = areaIds[urand(0, areaIds.size() - 1)];
+    auto const& auctioneers = mapIt->second.at(selectedArea);
+    outAuctioneer = auctioneers[urand(0, auctioneers.size() - 1)];
+    return true;
+}
+
 void TravelMgr::PrepareZone2LevelBracket()
 {
     // Classic WoW - starter zones
@@ -3807,6 +3835,7 @@ void TravelMgr::PrepareDestinationCache()
     uint32 flightMastersCount = 0;
     uint32 innkeepersCount = 0;
     uint32 bankerCount = 0;
+    uint32 auctioneerCount = 0;
 
     LOG_INFO("playerbots", "Preparing destination caches for {} levels...", maxLevel);
     // Temporary map to group creatures by entry and area
@@ -3972,6 +4001,31 @@ void TravelMgr::PrepareDestinationCache()
             }
             bankerCount++;
         }
+        // === AUCTIONEERS ===
+        else if (creatureTemplate->npcflag & UNIT_NPC_FLAG_AUCTIONEER)
+        {
+            FactionTemplateEntry const* factionEntry = sFactionTemplateStore.LookupEntry(creatureTemplate->faction);
+            if (!factionEntry)
+                continue;
+
+            bool forHorde = !(factionEntry->hostileMask & 4);
+            bool forAlliance = !(factionEntry->hostileMask & 2);
+
+            if (!forHorde && !forAlliance)
+                continue;
+
+            NpcLocation aLoc;
+            aLoc.loc = WorldLocation(mapId, x + cos(orient) * 3.0f, y + sin(orient) * 3.0f, z + 0.5f, orient + M_PI);
+            aLoc.entry = templateEntry;
+
+            if (forHorde)
+                hordeAuctioneerCache[mapId][areaId].push_back(aLoc);
+
+            if (forAlliance)
+                allianceAuctioneerCache[mapId][areaId].push_back(aLoc);
+
+            auctioneerCount++;
+        }
     }
 
     // Process temporary caches
@@ -4049,5 +4103,5 @@ void TravelMgr::PrepareDestinationCache()
             break;
         }
     }
-    LOG_INFO("playerbots", ">> {} flight masters, {} innkeepers, {} bankers collected.", flightMastersCount, innkeepersCount, bankerCount);
+    LOG_INFO("playerbots", ">> {} flight masters, {} innkeepers, {} bankers, {} auctioneers collected.", flightMastersCount, innkeepersCount, bankerCount, auctioneerCount);
 }
