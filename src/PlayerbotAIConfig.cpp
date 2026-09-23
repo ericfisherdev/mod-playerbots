@@ -8,6 +8,7 @@
 #include "BisListMgr.h"
 #include "Config.h"
 #include "NewRpgInfo.h"
+#include "BotAHUtil.h"
 #include "PlayerbotDungeonRepository.h"
 #include "PlayerbotFactory.h"
 #include "PlayerbotGuildMgr.h"
@@ -269,6 +270,18 @@ bool PlayerbotAIConfig::Initialize()
         sConfigMgr->GetOption<int32>("AiPlayerbot.MinRandomBotsPriceChangeInterval", 2 * HOUR);
     maxRandomBotsPriceChangeInterval =
         sConfigMgr->GetOption<int32>("AiPlayerbot.MaxRandomBotsPriceChangeInterval", 48 * HOUR);
+    enableAuctionHouseBotting = sConfigMgr->GetOption<bool>("AiPlayerbot.EnableAuctionHouseBotting", false);
+    auctionHouseMinBidPrice = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseMinBidPrice", 100);
+    auctionHouseUndercutChance = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseUndercutChance", 15);
+    auctionHouseUndercutMinPct = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseUndercutMinPct", 102);
+    auctionHouseUndercutMaxPct = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseUndercutMaxPct", 108);
+    auctionHouseBuyoutMinPct = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseBuyoutMinPct", 110);
+    auctionHouseBuyoutMaxPct = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseBuyoutMaxPct", 133);
+    auctionHouseMaterialStackSize = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionHouseMaterialStackSize", 20);
+    auctionPriceCacheTtlSeconds = sConfigMgr->GetOption<uint32>("AiPlayerbot.AuctionPriceCacheTtlSeconds", 600);
+    LoadSet<std::set<uint32>>(
+        sConfigMgr->GetOption<std::string>("AiPlayerbot.AuctionHouseExcludedItemIds", ""),
+        auctionHouseExcludedItemIds);
     randomBotJoinLfg = sConfigMgr->GetOption<bool>("AiPlayerbot.RandomBotJoinLfg", true);
 
     restrictHealerDPS = sConfigMgr->GetOption<bool>("AiPlayerbot.HealerDPSMapRestriction", false);
@@ -738,6 +751,7 @@ bool PlayerbotAIConfig::Initialize()
     RpgStatusProbWeight[RPG_DO_QUEST] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.DoQuest", 60);
     RpgStatusProbWeight[RPG_TRAVEL_FLIGHT] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.TravelFlight", 15);
     RpgStatusProbWeight[RPG_REST] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.Rest", 5);
+    RpgStatusProbWeight[RPG_GO_CITY] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.GoCity", 10);
     RpgStatusProbWeight[RPG_OUTDOOR_PVP] = sConfigMgr->GetOption<int32>("AiPlayerbot.RpgStatusProbWeight.OutdoorPvp", 10);
 
     syncLevelWithPlayers = sConfigMgr->GetOption<bool>("AiPlayerbot.SyncLevelWithPlayers", false);
@@ -785,6 +799,9 @@ bool PlayerbotAIConfig::Initialize()
         PlayerbotDungeonRepository::instance().LoadDungeonSuggestions();
     }
     sTravelMgr.Init();
+
+    if (sPlayerbotAIConfig.enableAuctionHouseBotting)
+        sBotAHUtil.Initialize();
 
     excludedHunterPetFamilies.clear();
     LoadList<std::vector<uint32>>(sConfigMgr->GetOption<std::string>("AiPlayerbot.ExcludedHunterPetFamilies", ""), excludedHunterPetFamilies);
@@ -953,6 +970,11 @@ bool PlayerbotAIConfig::IsInRandomAccountList(uint32 id)
 bool PlayerbotAIConfig::IsInRandomQuestItemList(uint32 id)
 {
     return find(randomBotQuestItems.begin(), randomBotQuestItems.end(), id) != randomBotQuestItems.end();
+}
+
+bool PlayerbotAIConfig::IsInAuctionHouseExcludedItemList(uint32 id) const
+{
+    return auctionHouseExcludedItemIds.find(id) != auctionHouseExcludedItemIds.end();
 }
 
 bool PlayerbotAIConfig::IsPvpProhibited(uint32 zoneId, uint32 areaId)
