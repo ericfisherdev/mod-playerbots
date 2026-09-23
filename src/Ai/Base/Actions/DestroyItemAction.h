@@ -30,6 +30,9 @@ public:
 
     bool Execute(Event event) override;
     bool isUseful() override;
+
+private:
+    static void SortCheapestFirstTradeGoodsLast(std::vector<Item*>& items);
 };
 
 #endif
