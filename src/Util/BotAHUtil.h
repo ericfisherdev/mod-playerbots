@@ -8,8 +8,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <ctime>
+#include <limits>
 #include <optional>
 #include <shared_mutex>
 #include <string>
@@ -177,21 +179,29 @@ namespace BotAuctionUtils
         Blended,       // queried with samples — blended template/market price
     };
 
-    inline uint32 RoundAuctionPrice(double price)
+    enum class PriceRounding : uint8
+    {
+        Nearest,
+        Up,
+    };
+
+    constexpr int AUCTION_PRICE_SIGNIFICANT_DIGITS = 2;
+    // Keeps ceil() from bumping exact values up through float error (150 / 10 -> 15.000000000000002).
+    constexpr double AUCTION_PRICE_ROUNDING_EPSILON = 1e-9;
+
+    // Rounds a copper price to two significant figures (150 -> 150, 199 -> 200, 12345 -> 12000)
+    // so listings read like player prices while moving the price by at most 5%. Never below 1.
+    inline uint32 RoundAuctionPrice(double price, PriceRounding rounding = PriceRounding::Nearest)
     {
         if (price <= 1.0)
             return 1;
 
-        if (price < 100.0)
-            return uint32(price);
-
-        if (price < 10000.0)
-            return uint32(price / 100.0) * 100;
-
-        if (price < 100000.0)
-            return uint32(price / 1000.0) * 1000;
-
-        return uint32(price / 10000.0) * 10000;
+        double const step =
+            std::max(1.0, std::pow(10.0, std::floor(std::log10(price)) - (AUCTION_PRICE_SIGNIFICANT_DIGITS - 1)));
+        double const steps = price / step;
+        double const roundedSteps =
+            rounding == PriceRounding::Up ? std::ceil(steps - AUCTION_PRICE_ROUNDING_EPSILON) : std::round(steps);
+        return static_cast<uint32>(std::min(roundedSteps * step, double(std::numeric_limits<uint32>::max())));
     }
 
     inline bool IsTradeGood(ItemTemplate const* proto) { return proto && proto->Class == ITEM_CLASS_TRADE_GOODS; }
