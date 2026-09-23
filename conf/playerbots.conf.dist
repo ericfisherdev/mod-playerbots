@@ -1654,6 +1654,15 @@ AiPlayerbot.AuctionHouseMaterialStackSize = 20
 # Default: 0
 AiPlayerbot.AuctionHouseRefreshKeepItems = 0
 
+# Random bots make room for loot they could post to the auction house by giving up junk.
+# - Looting with bags over 80% full: instead of skipping a sellable drop, the bot destroys its
+#   cheapest item it rates as vendor trash or useless, then loots.
+# - Bag cleanup at 90% full (smart destroy): auction house items are destroyed cheapest first,
+#   with trade goods kept longest, instead of in arbitrary order.
+# Requires EnableAuctionHouseBotting.
+# Default: 0 (disabled)
+AiPlayerbot.AuctionHousePreferSellableLoot = 0
+
 # Freshness window for the AH price cache, in seconds. Within this window,
 # pricing reuses the most recent observation; afterwards a re-query is
 # triggered before posting. Lower = more accurate, more AH traffic.

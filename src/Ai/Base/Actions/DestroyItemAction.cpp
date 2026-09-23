@@ -5,6 +5,10 @@
  */
 
 #include "DestroyItemAction.h"
+
+#include <algorithm>
+
+#include "BotAHUtil.h"
 #include "Event.h"
 #include "ItemCountValue.h"
 #include "Playerbots.h"
@@ -35,6 +39,21 @@ void DestroyItemAction::DestroyItem(FindItemVisitor* visitor)
 
         bot->DestroyItem(item->GetBagSlot(), item->GetSlot(), true);
     }
+}
+
+// Destruction order for auction house items: least valuable first, trade goods last.
+void SmartDestroyItemAction::SortCheapestFirstTradeGoodsLast(std::vector<Item*>& items)
+{
+    std::sort(items.begin(), items.end(),
+              [](Item const* a, Item const* b)
+              {
+                  bool const aTradeGood = BotAuctionUtils::IsTradeGood(a->GetTemplate());
+                  bool const bTradeGood = BotAuctionUtils::IsTradeGood(b->GetTemplate());
+                  if (aTradeGood != bTradeGood)
+                      return bTradeGood;
+
+                  return BotAuctionUtils::VendorValue(a) < BotAuctionUtils::VendorValue(b);
+              });
 }
 
 bool SmartDestroyItemAction::isUseful() { return !IsRealPlayer(botAI->GetMaster()); }
@@ -88,7 +107,10 @@ bool SmartDestroyItemAction::Execute(Event /*event*/)
     for (auto& usage : bestToDestroy)
     {
         std::vector<Item*> items = AI_VALUE2(std::vector<Item*>, "inventory items", "usage " + std::to_string(usage));
-        std::reverse(items.begin(), items.end());
+        if (usage == ITEM_USAGE_AH && sPlayerbotAIConfig.auctionHousePreferSellableLoot)
+            SortCheapestFirstTradeGoodsLast(items);
+        else
+            std::reverse(items.begin(), items.end());
 
         for (auto& item : items)
         {

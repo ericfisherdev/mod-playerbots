@@ -5,6 +5,7 @@
  */
 
 #include "LootAction.h"
+#include "BotAHUtil.h"
 #include "BroadcastHelper.h"
 #include "ChatHelper.h"
 #include "Event.h"
@@ -409,28 +410,9 @@ bool StoreLootAction::Execute(Event event)
         if (!proto)
             continue;
 
-        if (!IsRealPlayer(botAI->GetMaster()) && AI_VALUE(uint8, "bag space") > 80)
-        {
-            uint32 maxStack = proto->GetMaxStackSize();
-            if (maxStack == 1)
-                continue;
-
-            std::vector<Item*> found = parseItems(chat->FormatItem(proto));
-
-            bool hasFreeStack = false;
-
-            for (auto stack : found)
-            {
-                if (stack->GetCount() + itemcount < maxStack)
-                {
-                    hasFreeStack = true;
-                    break;
-                }
-            }
-
-            if (!hasFreeStack)
-                continue;
-        }
+        if (!IsRealPlayer(botAI->GetMaster()) && AI_VALUE(uint8, "bag space") > 80 && !HasStackRoom(proto, itemcount) &&
+            !MakeRoomForSellableLoot(proto))
+            continue;
 
         Player* master = botAI->GetMaster();
         if (sRandomPlayerbotMgr.IsRandomBot(bot) && master)
@@ -467,6 +449,68 @@ bool StoreLootAction::Execute(Event event)
     *packet << guid;
     bot->GetSession()->QueuePacket(packet);
     // bot->GetSession()->HandleLootReleaseOpcode(packet);
+    return true;
+}
+
+bool StoreLootAction::HasStackRoom(ItemTemplate const* proto, uint32 itemCount)
+{
+    uint32 maxStack = proto->GetMaxStackSize();
+    if (maxStack == 1)
+        return false;
+
+    for (Item* stack : parseItems(chat->FormatItem(proto)))
+    {
+        if (stack->GetCount() + itemCount < maxStack)
+            return true;
+    }
+
+    return false;
+}
+
+// Finds the cheapest bag item the bot rates as vendor trash or useless.
+class CheapestJunkVisitor : public IterateItemsVisitor
+{
+public:
+    explicit CheapestJunkVisitor(AiObjectContext* context) : IterateItemsVisitor(), context(context) {}
+
+    bool Visit(Item* item) override
+    {
+        ItemUsage usage = AI_VALUE2(ItemUsage, "item usage", item->GetEntry());
+        if (usage != ITEM_USAGE_VENDOR && usage != ITEM_USAGE_NONE)
+            return true;
+
+        uint64 value = BotAuctionUtils::VendorValue(item);
+        if (!cheapest || value < cheapestValue)
+        {
+            cheapest = item;
+            cheapestValue = value;
+        }
+        return true;
+    }
+
+    Item* cheapest = nullptr;
+
+private:
+    AiObjectContext* context;
+    uint64 cheapestValue = 0;
+};
+
+// With AuctionHousePreferSellableLoot, a drop the bot could post to the auction house replaces
+// the cheapest junk in its bags. Returns true when a bag slot was freed.
+bool StoreLootAction::MakeRoomForSellableLoot(ItemTemplate const* proto)
+{
+    if (!sPlayerbotAIConfig.enableAuctionHouseBotting || !sPlayerbotAIConfig.auctionHousePreferSellableLoot)
+        return false;
+
+    if (!sBotAHUtil.IsSellCandidate(proto))
+        return false;
+
+    CheapestJunkVisitor visitor(context);
+    IterateItems(&visitor, ITERATE_ITEMS_IN_BAGS);
+    if (!visitor.cheapest)
+        return false;
+
+    bot->DestroyItem(visitor.cheapest->GetBagSlot(), visitor.cheapest->GetSlot(), true);
     return true;
 }
 
