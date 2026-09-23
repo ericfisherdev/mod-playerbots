@@ -32,11 +32,20 @@ bool AhSellAction::PostAuctionSell(Item* item, ItemTemplate const* proto, Object
             double(anchorUnitPrice) * 100.0 / urand(minPct, maxPct));
     }
 
-    uint32 startBid = std::max<uint32>(sPlayerbotAIConfig.auctionHouseMinBidPrice,
-        BotAuctionUtils::RoundAuctionPrice(double(itemCount) * unitPrice * policy.minBidPct / 100.0));
+    // Never ask less than a vendor pays: the bot would lose money on the sale.
+    unitPrice = std::max<uint32>(unitPrice, proto->SellPrice);
+    double const vendorTotal = double(proto->SellPrice) * itemCount;
+    double const bidPrice = std::max(double(itemCount) * unitPrice * policy.minBidPct / 100.0, vendorTotal);
+
+    // Round both prices up so rounding never takes the bid below the vendor price or folds
+    // the buyout back onto the bid.
+    uint32 startBid =
+        std::max<uint32>(sPlayerbotAIConfig.auctionHouseMinBidPrice,
+                         BotAuctionUtils::RoundAuctionPrice(bidPrice, BotAuctionUtils::PriceRounding::Up));
     uint32 minBuyoutPct = std::max<uint32>(100, policy.buyoutMinPct);
     uint32 maxBuyoutPct = std::max<uint32>(minBuyoutPct, policy.buyoutMaxPct);
-    uint32 buyout = BotAuctionUtils::RoundAuctionPrice(double(startBid) * urand(minBuyoutPct, maxBuyoutPct) / 100.0);
+    uint32 buyout = BotAuctionUtils::RoundAuctionPrice(double(startBid) * urand(minBuyoutPct, maxBuyoutPct) / 100.0,
+                                                       BotAuctionUtils::PriceRounding::Up);
     if (buyout <= startBid)
         buyout = startBid + 1;
 
