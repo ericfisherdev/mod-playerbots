@@ -1150,6 +1150,9 @@ bool NewRpgBaseAction::CheckRpgStatusAvailable(NewRpgStatus status)
         }
         case RPG_GO_CITY:
         {
+            if (bot->GetLevel() < sPlayerbotAIConfig.rpgGoCityMinLevel)
+                return false;
+
             if (AreaTableEntry const* zone = sAreaTableStore.LookupEntry(bot->GetZoneId()))
             {
                 if (zone->flags & AREA_FLAG_CAPITAL)
@@ -1257,7 +1260,7 @@ bool NewRpgBaseAction::BuildCityTasks(std::vector<NewRpgInfo::CityTask>& outTask
 
     if (cityPosition == WorldPosition())
     {
-        std::vector<WorldLocation> cities = sTravelMgr.GetCityLocations(bot);
+        std::vector<WorldLocation> cities = sTravelMgr.GetCityLocations(bot, sPlayerbotAIConfig.rpgGoCityPreferSameMap);
         if (cities.empty())
             return false;
 

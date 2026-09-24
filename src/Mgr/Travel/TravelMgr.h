@@ -910,7 +910,9 @@ public:
     std::vector<std::vector<uint32>> GetOptimalFlightDestinations(Player* bot);
     const std::vector<WorldLocation> GetTeleportLocations(Player* bot);
     const std::vector<WorldLocation> GetTravelHubs(Player* bot);
-    std::vector<WorldLocation> GetCityLocations(Player* bot);
+    // preferSameMap: pick only among friendly or neutral capitals on the bot's current map when any
+    // exist, falling back to every city otherwise.
+    std::vector<WorldLocation> GetCityLocations(Player* bot, bool preferSameMap = false);
     std::vector<uint32> GetFlightNodesInZone(uint32 zoneId, TeamId team, uint32 excludeNode = 0) const;
     bool SelectAuctioneerByMap(Player* bot, NpcLocation& outAuctioneer);
     std::vector<WorldLocation> const& GetLocsPerLevelCache(uint8 level) { return locsPerLevelCache[level]; }
@@ -991,6 +993,11 @@ private:
 
     TravelMgr(TravelMgr&&) = delete;
     TravelMgr& operator=(TravelMgr&&) = delete;
+
+    // City selection
+    static std::vector<NpcLocation> FilterFriendlyBankersOnMap(std::vector<NpcLocation> const& bankers, uint32 mapId,
+                                                               TeamId teamId);
+    std::vector<WorldLocation> SelectCityLocations(Player* bot, std::vector<NpcLocation> const& bankers);
 
     // Navigation initialization
     void PrepareZone2LevelBracket();
