@@ -997,7 +997,7 @@ private:
     // City selection
     static std::vector<NpcLocation> FilterFriendlyBankersOnMap(std::vector<NpcLocation> const& bankers, uint32 mapId,
                                                                TeamId teamId);
-    std::vector<WorldLocation> SelectCityLocations(Player* bot, std::vector<NpcLocation> const& bankers);
+    std::vector<WorldLocation> SelectCityLocations(Player* bot, std::vector<NpcLocation> const& candidateBankers);
 
     // Navigation initialization
     void PrepareZone2LevelBracket();

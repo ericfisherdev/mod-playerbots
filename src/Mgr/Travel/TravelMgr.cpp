@@ -3687,10 +3687,10 @@ std::vector<TravelMgr::NpcLocation> TravelMgr::FilterFriendlyBankersOnMap(std::v
     return friendlyBankers;
 }
 
-std::vector<WorldLocation> TravelMgr::SelectCityLocations(Player* bot, std::vector<NpcLocation> const& bankers)
+std::vector<WorldLocation> TravelMgr::SelectCityLocations(Player* bot, std::vector<NpcLocation> const& candidateBankers)
 {
     std::vector<WorldLocation> fallbackLocations;
-    for (NpcLocation const& bLoc : bankers)
+    for (NpcLocation const& bLoc : candidateBankers)
         fallbackLocations.push_back(bLoc.loc);
 
     if (!sPlayerbotAIConfig.enableWeightTeleToCityBankers)
@@ -3698,7 +3698,7 @@ std::vector<WorldLocation> TravelMgr::SelectCityLocations(Player* bot, std::vect
 
     TeamId botTeamId = bot->GetTeamId();
     std::unordered_set<uint32> validBankerCities;
-    for (NpcLocation const& loc : bankers)
+    for (NpcLocation const& loc : candidateBankers)
     {
         Capital const* capital = FindCapitalByBanker(loc.entry);
         if (!capital)
