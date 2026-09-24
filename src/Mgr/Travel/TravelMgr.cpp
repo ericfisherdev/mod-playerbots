@@ -3652,12 +3652,45 @@ const std::vector<WorldLocation> TravelMgr::GetTravelHubs(Player* bot)
     return locs;
 }
 
-std::vector<WorldLocation> TravelMgr::GetCityLocations(Player* bot)
+std::vector<WorldLocation> TravelMgr::GetCityLocations(Player* bot, bool preferSameMap)
 {
-    uint32 level = bot->GetLevel();
+    auto const cacheIt = bankerLocsPerLevelCache.find(bot->GetLevel());
+    if (cacheIt == bankerLocsPerLevelCache.end())
+        return {};
 
+    std::vector<NpcLocation> const& bankers = cacheIt->second;
+    if (preferSameMap)
+    {
+        std::vector<NpcLocation> const sameMapBankers =
+            FilterFriendlyBankersOnMap(bankers, bot->GetMapId(), bot->GetTeamId());
+        if (!sameMapBankers.empty())
+            return SelectCityLocations(bot, sameMapBankers);
+    }
+
+    return SelectCityLocations(bot, bankers);
+}
+
+std::vector<TravelMgr::NpcLocation> TravelMgr::FilterFriendlyBankersOnMap(std::vector<NpcLocation> const& bankers,
+                                                                          uint32 mapId, TeamId teamId)
+{
+    std::vector<NpcLocation> friendlyBankers;
+    for (NpcLocation const& banker : bankers)
+    {
+        if (banker.loc.GetMapId() != mapId)
+            continue;
+
+        Capital const* capital = FindCapitalByBanker(banker.entry);
+        if (capital && (capital->team == teamId || capital->team == TEAM_NEUTRAL))
+            friendlyBankers.push_back(banker);
+    }
+
+    return friendlyBankers;
+}
+
+std::vector<WorldLocation> TravelMgr::SelectCityLocations(Player* bot, std::vector<NpcLocation> const& candidateBankers)
+{
     std::vector<WorldLocation> fallbackLocations;
-    for (auto& bLoc : bankerLocsPerLevelCache[level])
+    for (NpcLocation const& bLoc : candidateBankers)
         fallbackLocations.push_back(bLoc.loc);
 
     if (!sPlayerbotAIConfig.enableWeightTeleToCityBankers)
@@ -3665,7 +3698,7 @@ std::vector<WorldLocation> TravelMgr::GetCityLocations(Player* bot)
 
     TeamId botTeamId = bot->GetTeamId();
     std::unordered_set<uint32> validBankerCities;
-    for (auto& loc : bankerLocsPerLevelCache[level])
+    for (NpcLocation const& loc : candidateBankers)
     {
         Capital const* capital = FindCapitalByBanker(loc.entry);
         if (!capital)

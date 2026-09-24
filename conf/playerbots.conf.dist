@@ -1441,6 +1441,18 @@ AiPlayerbot.RpgStatusProbWeight.GoCity = 10
 AiPlayerbot.RpgStatusProbWeight.Rest = 5
 AiPlayerbot.RpgStatusProbWeight.OutdoorPvp = 10
 
+# Minimum bot level for the GoCity status. Below it, bots never start a trip to a city, including
+# auction house trips. The route to a capital usually crosses higher-level zones, which kills
+# low-level bots on the way.
+# Default: 0 (no minimum)
+AiPlayerbot.RpgGoCityMinLevel = 0
+
+# When a GoCity trip has no auction house errand, pick the city only among the bot's own-faction
+# and neutral capitals on its current map (continent), falling back to every capital when none is
+# there. Without it, a bot can be sent to a capital on another continent.
+# Default: 0 (disabled)
+AiPlayerbot.RpgGoCityPreferSameMap = 0
+
 # Bots' minimum and maximum level when teleporting in and out of a zone, according to the new RPG strategy
 # Format: AiPlayerbot.ZoneBracket.zoneID = minLevel,maxLevel
 #

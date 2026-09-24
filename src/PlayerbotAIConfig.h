@@ -409,6 +409,8 @@ public:
     uint32 travelNodeProbeSteps;
     float travelNodeDirectDistance;
     std::unordered_map<NewRpgStatus, uint32> RpgStatusProbWeight;
+    uint32 rpgGoCityMinLevel;
+    bool rpgGoCityPreferSameMap;
     bool syncLevelWithPlayers;
     bool randomBotConcentrateInPlayerZone;
     bool autoLearnQuestSpells;
