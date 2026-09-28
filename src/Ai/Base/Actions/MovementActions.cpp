@@ -224,11 +224,13 @@ bool MovementAction::JumpTo(uint32 mapId, float x, float y, float z, MovementPri
     return true;
 }
 
-bool MovementAction::MoveNear(uint32 mapId, float x, float y, float z, float distance, MovementPriority priority)
+bool MovementAction::MoveNear(uint32 mapId, float x, float y, float z, float distance, MovementPriority priority,
+                              bool ignoreEnemyTargets)
 {
     float angle = GetFollowAngle();
     EmitDebugMove("MoveNear", "mmap", x, y, z);
-    return MoveTo(mapId, x + cos(angle) * distance, y + sin(angle) * distance, z, false, false, false, false, priority);
+    return MoveTo(mapId, x + cos(angle) * distance, y + sin(angle) * distance, z, false, false, false, false, priority,
+                  false, false, ignoreEnemyTargets);
 }
 
 bool MovementAction::MoveNear(WorldObject* target, float distance, MovementPriority priority)

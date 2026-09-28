@@ -1419,6 +1419,13 @@ AiPlayerbot.EnableTravelNodes = 1
 AiPlayerbot.TravelNodeProbeSteps = 10
 AiPlayerbot.TravelNodeDirectDistance = 300
 
+# Whether a whispered 'go' command (coordinates, unit, game object or saved
+# position) walks the whole path even when hostile creatures are near it.
+# When disabled, the path is cut short before the first hostile creature's
+# aggro range, the same as the bot's own travel, and the bot stops there.
+# Default: 0 (disabled)
+AiPlayerbot.GoCommandIgnoresEnemies = 0
+
 # Control probability weights for RPG status of bots. Takes effect only when the status meets its premise.​
 # Sum of weights need not be 100. Set to 0 to disable the status.
 #
