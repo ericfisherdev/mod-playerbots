@@ -1064,6 +1064,9 @@ void TravelPath::ClipPath(PlayerbotAI* ai, Unit* mover, bool ignoreEnemyTargets)
             Creature* cre = unit->ToCreature();
             if (!cre)
                 continue;
+            // Neutral creatures never start a fight, so walking past them is safe.
+            if (!cre->IsHostileTo(mover))
+                continue;
             if (!cre->CanCreatureAttack(mover, true) || !unit->IsWithinLOSInMap(mover))
                 continue;
             float const range = cre->GetAttackDistance(mover);
