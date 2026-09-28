@@ -408,6 +408,7 @@ public:
     bool enableTravelNodes;
     uint32 travelNodeProbeSteps;
     float travelNodeDirectDistance;
+    bool goCommandIgnoresEnemies;
     std::unordered_map<NewRpgStatus, uint32> RpgStatusProbWeight;
     uint32 rpgGoCityMinLevel;
     bool rpgGoCityPreferSameMap;

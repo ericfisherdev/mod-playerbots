@@ -19,6 +19,10 @@ public:
     GoAction(PlayerbotAI* botAI) : MovementAction(botAI, "Go") {}
 
     bool Execute(Event event) override;
+
+private:
+    // Moves toward a destination the master whispered, honouring AiPlayerbot.GoCommandIgnoresEnemies.
+    bool MoveNearCommanded(float x, float y, float z, float distance);
 };
 
 #endif

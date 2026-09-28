@@ -85,8 +85,8 @@ bool GoAction::Execute(Event event)
                     std::ostringstream out;
                     out << "Moving to " << ChatHelper::FormatGameobject(go);
                     botAI->TellMasterNoFacing(out.str());
-                    return MoveNear(bot->GetMapId(), go->GetPositionX(), go->GetPositionY(), go->GetPositionZ() + 0.5f,
-                                    sPlayerbotAIConfig.followDistance);
+                    return MoveNearCommanded(go->GetPositionX(), go->GetPositionY(), go->GetPositionZ() + 0.5f,
+                                             sPlayerbotAIConfig.followDistance);
                 }
         }
         return false;
@@ -105,8 +105,8 @@ bool GoAction::Execute(Event event)
                 std::ostringstream out;
                 out << "Moving to " << unit->GetName();
                 botAI->TellMasterNoFacing(out.str());
-                return MoveNear(bot->GetMapId(), unit->GetPositionX(), unit->GetPositionY(),
-                                unit->GetPositionZ() + 0.5f, sPlayerbotAIConfig.followDistance);
+                return MoveNearCommanded(unit->GetPositionX(), unit->GetPositionY(), unit->GetPositionZ() + 0.5f,
+                                         sPlayerbotAIConfig.followDistance);
             }
     }
 
@@ -156,12 +156,7 @@ bool GoAction::Execute(Event event)
             botAI->TellMaster(out);
         }
 
-        if (bot->IsWithinLOS(x, y, z))
-            return MoveNear(bot->GetMapId(), x, y, z, 0);
-        else
-            return MoveTo(bot->GetMapId(), x, y, z, false, false);
-
-        return true;
+        return MoveNearCommanded(x, y, z, 0.0f);
     }
 
     if (param.find(",") != std::string::npos)
@@ -202,7 +197,7 @@ bool GoAction::Execute(Event event)
         out << "Moving to " << x1 << "," << y1;
         botAI->TellMasterNoFacing(out.str());
 
-        return MoveNear(bot->GetMapId(), x, y, z + 0.5f, sPlayerbotAIConfig.followDistance);
+        return MoveNearCommanded(x, y, z + 0.5f, sPlayerbotAIConfig.followDistance);
     }
 
     PositionInfo pos = context->GetValue<PositionMap&>("position")->Get()[param];
@@ -218,9 +213,15 @@ bool GoAction::Execute(Event event)
         std::ostringstream out;
         out << "Moving to position " << param;
         botAI->TellMasterNoFacing(out.str());
-        return MoveNear(bot->GetMapId(), pos.x, pos.y, pos.z + 0.5f, sPlayerbotAIConfig.followDistance);
+        return MoveNearCommanded(pos.x, pos.y, pos.z + 0.5f, sPlayerbotAIConfig.followDistance);
     }
 
     botAI->TellMaster("Whisper 'go x,y', 'go [game object]', 'go unit' or 'go position' and I will go there");
     return false;
+}
+
+bool GoAction::MoveNearCommanded(float x, float y, float z, float distance)
+{
+    return MoveNear(bot->GetMapId(), x, y, z, distance, MovementPriority::MOVEMENT_NORMAL,
+                    sPlayerbotAIConfig.goCommandIgnoresEnemies);
 }

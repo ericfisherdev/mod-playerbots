@@ -171,7 +171,7 @@ protected:
 
     bool JumpTo(uint32 mapId, float x, float y, float z, MovementPriority priority = MovementPriority::MOVEMENT_NORMAL);
     bool MoveNear(uint32 mapId, float x, float y, float z, float distance = sPlayerbotAIConfig.contactDistance,
-                  MovementPriority priority = MovementPriority::MOVEMENT_NORMAL);
+                  MovementPriority priority = MovementPriority::MOVEMENT_NORMAL, bool ignoreEnemyTargets = false);
     bool MoveToLOS(WorldObject* target, bool ranged = false);
     // Stages 5-14 of the funnel above: the routing pipeline. Reached from
     // MoveTo(mapId,...) unless a stage-4 bypass sends the move straight to
